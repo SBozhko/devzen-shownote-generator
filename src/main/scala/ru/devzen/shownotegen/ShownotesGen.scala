@@ -98,14 +98,22 @@ object ShownotesGen {
   }
 
   private def trellohook = {
-    (path("trellohook" ~ Slash.?) & post) {
-      entity(as[String]) { json =>
-        complete {
-          println(json)
-          StatusCodes.OK
+    path("trellohook" ~ Slash.?) {
+      post {
+        entity(as[String]) { json =>
+          complete {
+            println(json)
+            StatusCodes.OK
+          }
         }
-      }
-    }}
+      } ~
+        get {
+          complete {
+            StatusCodes.OK
+          }
+        }
+    }
+  }
 
 
   private def extractUrls(text: String): List[String] = {
