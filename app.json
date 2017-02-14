@@ -1,0 +1,5 @@
+{
+  "name": "DevZen shownote generator",
+  "description": "To generate shownotes",
+  "image": "heroku/scala"
+}
