@@ -72,7 +72,8 @@ object ShownotesGen {
               case Some(manualStartTime) => manualStartTime
               case None =>
                 val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
-                (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
+                val parsedLastChangedDate = (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
+                DateTime.parse(parsedLastChangedDate).getMillis
             }
 
             val period: Period = new Duration(startedRecordingAtMs, topicStartedAtMs.max).toPeriod
