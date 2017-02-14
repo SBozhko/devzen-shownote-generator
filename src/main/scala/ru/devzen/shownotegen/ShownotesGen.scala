@@ -35,7 +35,7 @@ object ShownotesGen {
 
   private def getRoute = {
     pathPrefix("generate") {
-      (get & path(LongNumber)) { startedRecordingAtMs =>
+      (get & path(LongNumber.?)) { manualStartTimeOpt =>
         complete {
           val discussedCardsJs = Request.Get(UrlGenerator.getDiscussedListUrl).execute().returnContent().asString()
           val cards = parse(discussedCardsJs) \ "cards"
@@ -47,9 +47,9 @@ object ShownotesGen {
 
             val urls = extractUrls(desc)
 
-            val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
+            val cardActionsJs = Request.Get(UrlGenerator.getCardActionsUrl(cardId)).execute().returnContent().asString()
 
-            val dragAndDropEvents = parse(cardInfoJs).children.filter { event =>
+            val dragAndDropEvents = parse(cardActionsJs).children.filter { event =>
               val eventType = (event \ "type").values.asInstanceOf[String]
               "updateCard" == eventType
             }
@@ -66,6 +66,13 @@ object ShownotesGen {
 
             if (topicStartedAtMs.size != 1) {
               println("WARN - Unexpected movements of a card from 'to discuss' to 'in discussion'")
+            }
+
+            val startedRecordingAtMs = manualStartTimeOpt match {
+              case Some(manualStartTime) => manualStartTime
+              case None =>
+                val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
+                (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
             }
 
             val period: Period = new Duration(startedRecordingAtMs, topicStartedAtMs.max).toPeriod
@@ -132,6 +139,7 @@ object Constants {
   val DiscussedListId = "58a25bbd8d9dd346cdfbc209"
   val ToDiscussCurrentEpisodeListId = "58a25bb3ee8b2c466ea64742"
   val InDiscussionListId = "58a25bb92cab934b5ee79fe8"
+  val RecordingStartedCardId = "58a311747827da4eccd243e1"
 }
 
 object UrlGenerator {
@@ -141,8 +149,12 @@ object UrlGenerator {
       s"fields=name&cards=open&card_fields=name,desc&key=${Config.ApiKey}&token=${Config.ReadToken}"
   }
 
-  def getCardInfoUrl(id: String): String = {
+  def getCardActionsUrl(id: String): String = {
     s"https://api.trello.com/1/cards/$id/actions?key=${Config.ApiKey}&token=${Config.ReadToken}"
+  }
+
+  def getCardInfoUrl(id: String): String = {
+    s"https://api.trello.com/1/cards/$id?key=${Config.ApiKey}&token=${Config.ReadToken}"
   }
 
 }
