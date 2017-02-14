@@ -8,7 +8,6 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.Directives.get
 import akka.http.scaladsl.server.Directives.path
-import akka.http.scaladsl.server.PathMatchers.LongNumber
 import akka.stream.ActorMaterializer
 import org.apache.http.client.fluent.Request
 import org.joda.time.DateTime
@@ -34,8 +33,8 @@ object ShownotesGen {
   }
 
   private def getRoute = {
-    pathPrefix("generate") {
-      (get & path(LongNumber.?)) { manualStartTimeOpt =>
+    (path("generate" ~ Slash.?) & get) {
+      parameters('start.as[Long] ?) { manualStartTimeOpt =>
         complete {
           val discussedCardsJs = Request.Get(UrlGenerator.getDiscussedListUrl).execute().returnContent().asString()
           val cards = parse(discussedCardsJs) \ "cards"
