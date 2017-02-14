@@ -4,6 +4,7 @@ import java.util.regex.Pattern
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.Directives.get
@@ -27,7 +28,7 @@ object ShownotesGen {
 
     implicit val system = ActorSystem("shownotegenerator")
     implicit val materializer = ActorMaterializer()
-    val routes = getRoute
+    val routes = getRoute ~ trellohook
     Http().bindAndHandle(routes, "0.0.0.0", Properties.envOrElse("PORT", "9025").toInt)
     println(s"Server online")
   }
@@ -95,6 +96,17 @@ object ShownotesGen {
       }
     }
   }
+
+  private def trellohook = {
+    (path("trellohook" ~ Slash.?) & post) {
+      entity(as[String]) { json =>
+        complete {
+          println(json)
+          StatusCodes.OK
+        }
+      }
+    }}
+
 
   private def extractUrls(text: String): List[String] = {
     val containedUrls = new scala.collection.mutable.ArrayBuffer[String]()
