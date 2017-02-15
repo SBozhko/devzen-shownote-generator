@@ -73,7 +73,9 @@ object ShownotesGen {
             val startedRecordingAtMs = manualStartTimeOpt match {
               case Some(manualStartTime) => manualStartTime
               case None =>
-                val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
+                val cardInfoJs = Request
+                  .Get(UrlGenerator.getCardInfoUrl(Constants.TrelloRecordingStartedCardId))
+                  .execute().returnContent().asString()
                 val parsedLastChangedDate = (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
                 DateTime.parse(parsedLastChangedDate).getMillis
             }
