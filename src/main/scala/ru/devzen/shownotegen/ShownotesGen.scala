@@ -103,10 +103,7 @@ object ShownotesGen {
 
   private def generateHtml(processed: List[Theme]): String = {
 
-    val escapedThemes = processed.map { theme =>
-      val escapedUrls = theme.urls.map(StringEscapeUtils.escapeHtml4)
-      theme.copy(title = StringEscapeUtils.escapeHtml4(theme.title), urls = escapedUrls)
-    }
+    val escapedThemes = processed.map(theme => theme.copy(title = StringEscapeUtils.escapeHtml4(theme.title)))
 
     val response = StringBuilder.newBuilder
     response.append("<ul>\n")
