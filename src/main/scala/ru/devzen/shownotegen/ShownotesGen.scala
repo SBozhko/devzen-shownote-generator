@@ -16,6 +16,7 @@ import org.joda.time.DateTime
 import org.joda.time.Duration
 import org.joda.time.Period
 import org.joda.time.format.PeriodFormatterBuilder
+import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
@@ -26,11 +27,11 @@ case class Theme(title: String, urls: List[String], relativeStartReadableTime: S
 object ShownotesGen {
 
   def main(args: Array[String]): Unit = {
-      implicit val system = ActorSystem("shownotegenerator")
-      implicit val materializer = ActorMaterializer()
-      val routes = getRoute ~ trelloHook
-      Http().bindAndHandle(routes, "0.0.0.0", Properties.envOrElse("PORT", "9025").toInt)
-      println(s"Server online")
+    implicit val system = ActorSystem("shownotegenerator")
+    implicit val materializer = ActorMaterializer()
+    val routes = getRoute ~ trelloHook
+    Http().bindAndHandle(routes, "0.0.0.0", Properties.envOrElse("PORT", "9025").toInt)
+    println(s"Server online")
   }
 
   private def getRoute = {
@@ -97,19 +98,6 @@ object ShownotesGen {
     }
   }
 
-  private def extractUrls(text: String): List[String] = {
-    val containedUrls = new scala.collection.mutable.ArrayBuffer[String]()
-    val urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)"
-    val pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE)
-    val urlMatcher = pattern.matcher(text)
-
-    while (urlMatcher.find()) {
-      containedUrls.append(text.substring(urlMatcher.start(0), urlMatcher.end(0)))
-    }
-
-    containedUrls.toList
-  }
-
   private def generateHtml(processed: List[Theme]): String = {
     val response = StringBuilder.newBuilder
     response.append("<ul>\n")
@@ -141,7 +129,7 @@ object ShownotesGen {
         entity(as[String]) { json =>
           println(json)
           val event = parse(json)
-          val eventType = (event \ "type").values.asInstanceOf[String]
+          val eventType = (event \ "action" \ "type").values.asInstanceOf[String]
           if ("updateCard" == eventType) {
             val listBeforeId = (event \ "action" \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
             val listAfterId = (event \ "action" \ "data" \ "listAfter" \ "id").values.asInstanceOf[String]
@@ -152,23 +140,23 @@ object ShownotesGen {
 
               val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
               val parsedCardDesc = (parse(cardInfoJs) \ "desc").values.asInstanceOf[String]
-              val urls = extractUrls(parsedCardDesc)
+              val urls = extractUrls(parsedCardDesc).mkString("\n")
 
-              Request
+              val jsonBody = compact(render("text" -> s"$title\n$urls"))
+              val response = Request
                 .Post(UrlGenerator.postMessageToGitterChannel)
                 .addHeader("Authorization", s"Bearer ${Config.GitterAccessToken}")
-                .bodyString(
-                  s"""
-                     |{
-                     |  "text" : "$title\n${urls.mkString("\n")}"                      |
-                     |}
-                    """.stripMargin, ContentType.APPLICATION_JSON)
-                .execute().discardContent()
+                .bodyString(jsonBody, ContentType.APPLICATION_JSON)
+                .execute().returnResponse()
+              if (response.getStatusLine.getStatusCode != 200) {
+                println(s"Can't send message to Gitter. Gitter response:\n$response")
+              } else {
+                println(s"Sent message to Gitter successfully")
+              }
             }
           }
 
           complete {
-            println("Sent message to Gitter")
             StatusCodes.OK
           }
         }
@@ -179,6 +167,19 @@ object ShownotesGen {
           }
         }
     }
+  }
+
+  private def extractUrls(text: String): List[String] = {
+    val containedUrls = new scala.collection.mutable.ArrayBuffer[String]()
+    val urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)"
+    val pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE)
+    val urlMatcher = pattern.matcher(text)
+
+    while (urlMatcher.find()) {
+      containedUrls.append(text.substring(urlMatcher.start(0), urlMatcher.end(0)))
+    }
+
+    containedUrls.toList
   }
 }
 
