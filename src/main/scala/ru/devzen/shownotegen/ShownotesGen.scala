@@ -26,12 +26,15 @@ case class Theme(title: String, urls: List[String], relativeStartReadableTime: S
 object ShownotesGen {
 
   def main(args: Array[String]): Unit = {
-
-    implicit val system = ActorSystem("shownotegenerator")
-    implicit val materializer = ActorMaterializer()
-    val routes = getRoute ~ trelloHook
-    Http().bindAndHandle(routes, "0.0.0.0", Properties.envOrElse("PORT", "9025").toInt)
-    println(s"Server online")
+    try {
+      implicit val system = ActorSystem("shownotegenerator")
+      implicit val materializer = ActorMaterializer()
+      val routes = getRoute ~ trelloHook
+      Http().bindAndHandle(routes, "0.0.0.0", Properties.envOrElse("PORT", "9025").toInt)
+      println(s"Server online")
+    } catch {
+      case e: Exception => e.printStackTrace()
+    }
   }
 
   private def getRoute = {
