@@ -11,7 +11,8 @@ libraryDependencies ++= Seq(
   "org.apache.httpcomponents" % "httpclient" % "4.5.3",
   "org.apache.httpcomponents" % "fluent-hc" % "4.5.3",
   "com.typesafe.akka" %% "akka-http-core" % "10.0.1",
-  "com.typesafe.akka" %% "akka-http" % "10.0.1"
+  "com.typesafe.akka" %% "akka-http" % "10.0.1",
+  "org.apache.commons" % "commons-lang3" % "3.5"
 )
 
 enablePlugins(JavaServerAppPackaging)

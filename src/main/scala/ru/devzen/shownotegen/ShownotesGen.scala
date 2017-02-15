@@ -10,6 +10,7 @@ import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.Directives.get
 import akka.http.scaladsl.server.Directives.path
 import akka.stream.ActorMaterializer
+import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.http.client.fluent.Request
 import org.apache.http.entity.ContentType
 import org.joda.time.DateTime
@@ -99,9 +100,15 @@ object ShownotesGen {
   }
 
   private def generateHtml(processed: List[Theme]): String = {
+
+    val escapedThemes = processed.map { theme =>
+      val escapedUrls = theme.urls.map(StringEscapeUtils.escapeHtml4)
+      theme.copy(title = StringEscapeUtils.escapeHtml4(theme.title), urls = escapedUrls)
+    }
+
     val response = StringBuilder.newBuilder
     response.append("<ul>\n")
-    processed.foreach { theme =>
+    escapedThemes.foreach { theme =>
       response.append(s"<li>[${theme.relativeStartReadableTime}] ")
 
       theme.urls.size match {
