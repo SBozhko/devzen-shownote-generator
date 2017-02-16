@@ -15,7 +15,6 @@ import org.apache.http.client.fluent.Request
 import org.apache.http.entity.ContentType
 import org.joda.time.DateTime
 import org.joda.time.Duration
-import org.joda.time.Period
 import org.joda.time.format.PeriodFormatterBuilder
 import org.json4s.JsonDSL._
 import org.json4s._
@@ -23,7 +22,7 @@ import org.json4s.jackson.JsonMethods._
 
 import scala.util.Properties
 
-case class Theme(title: String, urls: List[String], relativeStartReadableTime: String, relativeStartMs: Long)
+case class Theme(title: String, urls: List[String], readableStartTime: String, relativeStartMs: Long)
 
 object ShownotesGen {
 
@@ -38,77 +37,81 @@ object ShownotesGen {
   private def getRoute = {
     (path("generate" ~ Slash.?) & get) {
       parameters('start.as[Long] ?) { manualStartTimeOpt =>
-        complete {
-          val discussedCardsJs = Request.Get(UrlGenerator.getDiscussedListUrl).execute().returnContent().asString()
-          val cards = parse(discussedCardsJs) \ "cards"
+        val discussedCardsJs = Request.Get(UrlGenerator.getDiscussedListUrl).execute().returnContent().asString()
+        val cards = parse(discussedCardsJs) \ "cards"
 
-          val processedThemes = cards.children.map { card =>
-            val cardId = (card \ "id").values.asInstanceOf[String]
-            val name = (card \ "name").values.asInstanceOf[String]
-            val desc = (card \ "desc").values.asInstanceOf[String]
+        val processedThemes = cards.children.map { card =>
+          val cardId = (card \ "id").values.asInstanceOf[String]
+          val name = (card \ "name").values.asInstanceOf[String]
+          val desc = (card \ "desc").values.asInstanceOf[String]
 
-            val urls = extractUrls(desc)
+          val startedDiscussionAtMs = getTimestampOfThemeStartedEvent(cardId)
+          val startedRecordingAtMs = getTimestampOfRecordingStartedEvent(manualStartTimeOpt)
+          val relativeStartStr = getHumanReadableTimestamp(startedRecordingAtMs, startedDiscussionAtMs)
 
-            val cardActionsJs = Request.Get(UrlGenerator.getCardActionsUrl(cardId)).execute().returnContent().asString()
+          Theme(name, extractUrls(desc), relativeStartStr, startedDiscussionAtMs)
+        }.sortWith((t1, t2) => t1.relativeStartMs <= t2.relativeStartMs)
 
-            val dragAndDropEvents = parse(cardActionsJs).children.filter { event =>
-              val eventType = (event \ "type").values.asInstanceOf[String]
-              "updateCard" == eventType
-            }
-
-            val topicStartedAtMs = dragAndDropEvents.flatMap { event =>
-              val listAfterId = (event \ "data" \ "listAfter" \ "id").values.asInstanceOf[String]
-              val listBeforeId = (event \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
-
-              if (Constants.TrelloToDiscussCurrentEpisodeListId == listBeforeId && Constants.TrelloInDiscussionListId == listAfterId) {
-                val dateString = (event \ "date").values.asInstanceOf[String]
-                Some(DateTime.parse(dateString).getMillis)
-              } else None
-            }
-
-            if (topicStartedAtMs.size != 1) {
-              println("WARN - Unexpected movements of a card from 'to discuss' to 'in discussion'")
-            }
-
-            val startedRecordingAtMs = manualStartTimeOpt match {
-              case Some(manualStartTime) => manualStartTime
-              case None =>
-                val cardInfoJs = Request
-                  .Get(UrlGenerator.getCardInfoUrl(Constants.TrelloRecordingStartedCardId))
-                  .execute().returnContent().asString()
-                val parsedLastChangedDate = (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
-                DateTime.parse(parsedLastChangedDate).getMillis
-            }
-
-            val period: Period = new Duration(startedRecordingAtMs, topicStartedAtMs.max).toPeriod
-            val hoursMinutesAndSeconds = new PeriodFormatterBuilder()
-              .printZeroAlways()
-              .minimumPrintedDigits(2)
-              .appendHours()
-              .appendSeparator(":")
-              .appendMinutes()
-              .appendSeparator(":")
-              .appendSeconds()
-              .toFormatter
-            val relativeStartStr = hoursMinutesAndSeconds.print(period)
-
-            Theme(name, urls, relativeStartStr, topicStartedAtMs.max)
-          }.sortWith((t1, t2) => t1.relativeStartMs <= t2.relativeStartMs)
-
-          generateHtml(processedThemes)
-        }
+        complete(generateHtml(processedThemes))
       }
     }
   }
 
+  private def getHumanReadableTimestamp(startedRecordingAtMs: Long, startedDiscussionAtMs: Long): String = {
+    val timestampFmt = new PeriodFormatterBuilder()
+      .printZeroAlways()
+      .minimumPrintedDigits(2)
+      .appendHours()
+      .appendSeparator(":")
+      .appendMinutes()
+      .appendSeparator(":")
+      .appendSeconds()
+      .toFormatter
+    val duration = new Duration(startedRecordingAtMs, startedDiscussionAtMs)
+    timestampFmt.print(duration.toPeriod)
+  }
+
+  private def getTimestampOfRecordingStartedEvent(manualStartTimeOpt: Option[Long]): Long = {
+    manualStartTimeOpt match {
+      case Some(manualStartTime) => manualStartTime
+      case None =>
+        val cardInfoJs = Request
+          .Get(UrlGenerator.getCardInfoUrl(Constants.TrelloRecordingStartedCardId))
+          .execute().returnContent().asString()
+        val parsedLastChangedDate = (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
+        DateTime.parse(parsedLastChangedDate).getMillis
+    }
+  }
+
+  private def getTimestampOfThemeStartedEvent(cardId: String): Long = {
+    val cardActionsJs = Request.Get(UrlGenerator.getCardActionsUrl(cardId)).execute().returnContent().asString()
+    val possibleStartTimestamps = parse(cardActionsJs).children.flatMap { event =>
+      (event \ "type").values.asInstanceOf[String] match {
+        case "updateCard" =>
+          val listAfterId = (event \ "data" \ "listAfter" \ "id").values.asInstanceOf[String]
+          val listBeforeId = (event \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
+
+          (listBeforeId, listAfterId) match {
+            case (Constants.TrelloToDiscussCurrentEpisodeListId, Constants.TrelloInDiscussionListId) =>
+              val dateString = (event \ "date").values.asInstanceOf[String]
+              Some(DateTime.parse(dateString).getMillis)
+            case _ => None
+          }
+        case _ => None
+      }
+    }
+    if (possibleStartTimestamps.size != 1) {
+      println("WARN - More than one movement of a card 'to discuss' -> 'in discussion'. Using the latest timestamp.")
+    }
+    possibleStartTimestamps.max
+  }
+
   private def generateHtml(processed: List[Theme]): String = {
-
     val escapedThemes = processed.map(theme => theme.copy(title = StringEscapeUtils.escapeHtml4(theme.title)))
+    val response = StringBuilder.newBuilder.append("<ul>\n")
 
-    val response = StringBuilder.newBuilder
-    response.append("<ul>\n")
     escapedThemes.foreach { theme =>
-      response.append(s"<li>[${theme.relativeStartReadableTime}] ")
+      response.append(s"<li>[${theme.readableStartTime}] ")
 
       theme.urls.size match {
         case 0 =>
@@ -118,61 +121,12 @@ object ShownotesGen {
         case _ =>
           response.append(theme.title + "\n")
           response.append("<ul>\n")
-          theme.urls.foreach { url =>
-            response.append(s"""<li><a href="$url">$url</a></li>\n""")
-          }
+          theme.urls.foreach(url => response.append(s"""<li><a href="$url">$url</a></li>\n"""))
           response.append("</ul>\n")
           response.append("</li>\n")
       }
     }
-    response.append("</ul>\n")
-    response.toString
-  }
-
-  private def trelloHook = {
-    path("trellohook" ~ Slash.?) {
-      post {
-        entity(as[String]) { json =>
-          println(json)
-          val event = parse(json)
-          val eventType = (event \ "action" \ "type").values.asInstanceOf[String]
-          if ("updateCard" == eventType) {
-            val listBeforeId = (event \ "action" \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
-            val listAfterId = (event \ "action" \ "data" \ "listAfter" \ "id").values.asInstanceOf[String]
-
-            if (Constants.TrelloToDiscussCurrentEpisodeListId == listBeforeId && Constants.TrelloInDiscussionListId == listAfterId) {
-              val title = (event \ "action" \ "data" \ "card" \ "name").values.asInstanceOf[String]
-              val cardId = (event \ "action" \ "data" \ "card" \ "id").values.asInstanceOf[String]
-
-              val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
-              val parsedCardDesc = (parse(cardInfoJs) \ "desc").values.asInstanceOf[String]
-              val urls = extractUrls(parsedCardDesc).mkString("\n")
-
-              val jsonBody = compact(render("text" -> s"$title\n$urls"))
-              val response = Request
-                .Post(UrlGenerator.postMessageToGitterChannel)
-                .addHeader("Authorization", s"Bearer ${Config.GitterAccessToken}")
-                .bodyString(jsonBody, ContentType.APPLICATION_JSON)
-                .execute().returnResponse()
-              if (response.getStatusLine.getStatusCode != 200) {
-                println(s"Can't send message to Gitter. Gitter response:\n$response")
-              } else {
-                println(s"Sent message to Gitter successfully")
-              }
-            }
-          }
-
-          complete {
-            StatusCodes.OK
-          }
-        }
-      } ~
-        get {
-          complete {
-            StatusCodes.OK
-          }
-        }
-    }
+    response.append("</ul>\n").toString
   }
 
   private def extractUrls(text: String): List[String] = {
@@ -186,6 +140,56 @@ object ShownotesGen {
     }
 
     containedUrls.toList
+  }
+
+  private def trelloHook = {
+    path("trellohook" ~ Slash.?) {
+      post {
+        entity(as[String]) { json =>
+          println(json)
+          val event = parse(json)
+          val actionType = (event \ "action" \ "type").values.asInstanceOf[String]
+
+          if ("updateCard" == actionType) {
+            val listBeforeId = (event \ "action" \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
+            val listAfterId = (event \ "action" \ "data" \ "listAfter" \ "id").values.asInstanceOf[String]
+
+            if (Constants.TrelloToDiscussCurrentEpisodeListId == listBeforeId && Constants.TrelloInDiscussionListId == listAfterId) {
+              val title = (event \ "action" \ "data" \ "card" \ "name").values.asInstanceOf[String]
+              val cardId = (event \ "action" \ "data" \ "card" \ "id").values.asInstanceOf[String]
+              val urls = getThemeUrlsByCardId(cardId)
+              postMessageToGitter(title, urls)
+            }
+          }
+          complete(StatusCodes.OK)
+        }
+      }
+    } ~
+      get {
+        complete(StatusCodes.OK)
+      }
+  }
+
+  private def getThemeUrlsByCardId(cardId: String): List[String] = {
+    val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
+    val parsedCardDesc = (parse(cardInfoJs) \ "desc").values.asInstanceOf[String]
+    val urls = extractUrls(parsedCardDesc)
+    urls
+  }
+
+  private def postMessageToGitter(title: String, urls: List[String]): Unit = {
+    val urlsAsString = urls.mkString("\n")
+    val jsonBody = compact(render("text" -> s"$title\n$urlsAsString"))
+    val response = Request
+      .Post(UrlGenerator.postMessageToGitterChannel)
+      .addHeader("Authorization", s"Bearer ${Config.GitterAccessToken}")
+      .bodyString(jsonBody, ContentType.APPLICATION_JSON)
+      .execute().returnResponse()
+    if (response.getStatusLine.getStatusCode != 200) {
+      println(s"Can't send message to Gitter. Gitter response:\n$response")
+    } else {
+      println(s"Sent message to Gitter successfully")
+    }
   }
 }
 
