@@ -29,12 +29,12 @@ object ShownotesGen {
   def main(args: Array[String]): Unit = {
     implicit val system = ActorSystem("shownotegenerator")
     implicit val materializer = ActorMaterializer()
-    val routes = getRoute ~ trelloHook
+    val routes = generateShownotes ~ trelloHook
     Http().bindAndHandle(routes, "0.0.0.0", Properties.envOrElse("PORT", "9025").toInt)
     println(s"Server online")
   }
 
-  private def getRoute = {
+  private def generateShownotes = {
     (path("generate" ~ Slash.?) & get) {
       parameters('start.as[Long] ?) { manualStartTimeOpt =>
         val discussedCardsJs = Request.Get(UrlGenerator.getDiscussedListUrl).execute().returnContent().asString()
