@@ -37,22 +37,28 @@ object ShownotesGen {
   private def generateShownotes = {
     (path("generate" ~ Slash.?) & get) {
       parameters('start.as[Long] ?) { manualStartTimeOpt =>
-        val discussedCardsJs = Request.Get(UrlGenerator.getDiscussedListUrl).execute().returnContent().asString()
-        val cards = parse(discussedCardsJs) \ "cards"
+        try {
+          val discussedCardsJs = Request.Get(UrlGenerator.getDiscussedListUrl).execute().returnContent().asString()
+          val cards = parse(discussedCardsJs) \ "cards"
 
-        val processedThemes = cards.children.map { card =>
-          val cardId = (card \ "id").values.asInstanceOf[String]
-          val name = (card \ "name").values.asInstanceOf[String]
-          val desc = (card \ "desc").values.asInstanceOf[String]
+          val processedThemes = cards.children.map { card =>
+            val cardId = (card \ "id").values.asInstanceOf[String]
+            val name = (card \ "name").values.asInstanceOf[String]
+            val desc = (card \ "desc").values.asInstanceOf[String]
 
-          val startedDiscussionAtMs = getTimestampOfThemeStartedEvent(cardId)
-          val startedRecordingAtMs = getTimestampOfRecordingStartedEvent(manualStartTimeOpt)
-          val relativeStartStr = getHumanReadableTimestamp(startedRecordingAtMs, startedDiscussionAtMs)
+            val startedDiscussionAtMs = getTimestampOfThemeStartedEvent(cardId)
+            val startedRecordingAtMs = getTimestampOfRecordingStartedEvent(manualStartTimeOpt)
+            val relativeStartStr = getHumanReadableTimestamp(startedRecordingAtMs, startedDiscussionAtMs)
 
-          Theme(name, extractUrls(desc), relativeStartStr, startedDiscussionAtMs)
-        }.sortWith((t1, t2) => t1.relativeStartMs <= t2.relativeStartMs)
+            Theme(name, extractUrls(desc), relativeStartStr, startedDiscussionAtMs)
+          }.sortWith((t1, t2) => t1.relativeStartMs <= t2.relativeStartMs)
 
-        complete(generateHtml(processedThemes))
+          complete(generateHtml(processedThemes))
+        } catch {
+          case e: Exception =>
+            e.printStackTrace()
+            complete(StatusCodes.InternalServerError, e.getMessage)
+        }
       }
     }
   }
@@ -77,7 +83,7 @@ object ShownotesGen {
       case None =>
         val cardInfoJs = Request
           .Get(UrlGenerator.getCardInfoUrl(Constants.TrelloRecordingStartedCardId))
-          .execute().returnContent().asString()
+          .execute().returnContent()..asString()
         val parsedLastChangedDate = (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
         DateTime.parse(parsedLastChangedDate).getMillis
     }
@@ -92,7 +98,9 @@ object ShownotesGen {
           val listBeforeId = (event \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
 
           (listBeforeId, listAfterId) match {
-            case (Constants.TrelloToDiscussCurrentEpisodeListId, Constants.TrelloInDiscussionListId) =>
+            case pairOfIds
+              if (pairOfIds == (Constants.TrelloToDiscussCurrentEpisodeListId, Constants.TrelloInDiscussionListId))
+                || pairOfIds == (Constants.TrelloBacklogListId, Constants.TrelloInDiscussionListId) =>
               val dateString = (event \ "date").values.asInstanceOf[String]
               Some(DateTime.parse(dateString).getMillis)
             case _ => None
@@ -101,7 +109,7 @@ object ShownotesGen {
       }
     }
     if (possibleStartTimestamps.size != 1) {
-      println("WARN - More than one movement of a card 'to discuss' -> 'in discussion'. Using the latest timestamp.")
+      println(s"WARN - More than one movement of a card $cardId 'to discuss' -> 'in discussion'. Using the latest timestamp.")
     }
     possibleStartTimestamps.max
   }
@@ -146,20 +154,25 @@ object ShownotesGen {
     path("trellohook" ~ Slash.?) {
       post {
         entity(as[String]) { json =>
-          println(json)
-          val event = parse(json)
-          val actionType = (event \ "action" \ "type").values.asInstanceOf[String]
+          try {
+            println(json)
+            val event = parse(json)
+            val actionType = (event \ "action" \ "type").values.asInstanceOf[String]
 
-          if ("updateCard" == actionType) {
-            val listBeforeId = (event \ "action" \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
-            val listAfterId = (event \ "action" \ "data" \ "listAfter" \ "id").values.asInstanceOf[String]
+            if ("updateCard" == actionType) {
+              val listBeforeId = (event \ "action" \ "data" \ "listBefore" \ "id").values.asInstanceOf[String]
+              val listAfterId = (event \ "action" \ "data" \ "listAfter" \ "id").values.asInstanceOf[String]
 
-            if (Constants.TrelloToDiscussCurrentEpisodeListId == listBeforeId && Constants.TrelloInDiscussionListId == listAfterId) {
-              val title = (event \ "action" \ "data" \ "card" \ "name").values.asInstanceOf[String]
-              val cardId = (event \ "action" \ "data" \ "card" \ "id").values.asInstanceOf[String]
-              val urls = getThemeUrlsByCardId(cardId)
-              postMessageToGitter(title, urls)
+              if (Constants.TrelloToDiscussCurrentEpisodeListId == listBeforeId && Constants.TrelloInDiscussionListId == listAfterId) {
+                val title = (event \ "action" \ "data" \ "card" \ "name").values.asInstanceOf[String]
+                val cardId = (event \ "action" \ "data" \ "card" \ "id").values.asInstanceOf[String]
+                val urls = getThemeUrlsByCardId(cardId)
+                postMessageToGitter(title, urls)
+              }
             }
+          } catch {
+            case e: Exception =>
+              e.printStackTrace()
           }
           complete(StatusCodes.OK)
         }
@@ -198,6 +211,7 @@ object Constants {
   val TrelloToDiscussCurrentEpisodeListId = "58a25bb3ee8b2c466ea64742"
   val TrelloInDiscussionListId = "58a25bb92cab934b5ee79fe8"
   val TrelloRecordingStartedCardId = "58a311747827da4eccd243e1"
+  val TrelloBacklogListId = "58a25bdf46fa646fb87520a7"
 
   val GitterDevzenRoomId = "577e2d7fc2f0db084a21df2b"
 }
