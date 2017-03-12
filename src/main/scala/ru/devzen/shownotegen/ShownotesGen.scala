@@ -83,7 +83,7 @@ object ShownotesGen {
       case None =>
         val cardInfoJs = Request
           .Get(UrlGenerator.getCardInfoUrl(Constants.TrelloRecordingStartedCardId))
-          .execute().returnContent()..asString()
+          .execute().returnContent().asString()
         val parsedLastChangedDate = (parse(cardInfoJs) \ "dateLastActivity").values.asInstanceOf[String]
         DateTime.parse(parsedLastChangedDate).getMillis
     }
