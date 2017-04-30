@@ -21,7 +21,6 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 import scala.util.Properties
-import scala.util.Try
 
 case class Theme(title: String, urls: List[String], readableStartTime: String, relativeStartMs: Long)
 
@@ -114,13 +113,17 @@ object ShownotesGen {
         case _ => None
       }
     }
-    if (possibleStartTimestamps.size > 1) {
-      println(s"WARN - More than one movement of a card $cardId 'to discuss' -> 'in discussion'. Using the latest timestamp.")
+
+    possibleStartTimestamps match {
+      case _ if possibleStartTimestamps.size == 1 =>
+        Some(possibleStartTimestamps.head)
+      case _ if possibleStartTimestamps.size > 1 =>
+        println(s"WARN - More than one card movement of $cardId 'to discuss' -> 'in discussion'. Using the latest timestamp.")
+        Some(possibleStartTimestamps.max)
+      case _ if possibleStartTimestamps.isEmpty =>
+        println(s"WARN - Can't fined card movements of $cardId 'to discuss' -> 'in discussion'. No timestamp found.")
+        None
     }
-    if (possibleStartTimestamps.size == 1) {
-      println(s"WARN - Can't fined movements of a card $cardId 'to discuss' -> 'in discussion'. No timestamp found.")
-    }
-    Try(possibleStartTimestamps.max).toOption
   }
 
   private def generateHtml(processed: List[Theme]): String = {
