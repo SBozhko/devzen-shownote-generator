@@ -21,6 +21,7 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 import scala.util.Properties
+import scala.util.Try
 
 case class Theme(title: String, urls: List[String], readableStartTime: String, relativeStartMs: Long)
 
@@ -46,11 +47,16 @@ object ShownotesGen {
             val name = (card \ "name").values.asInstanceOf[String]
             val desc = (card \ "desc").values.asInstanceOf[String]
 
-            val startedDiscussionAtMs = getTimestampOfThemeStartedEvent(cardId)
-            val startedRecordingAtMs = getTimestampOfRecordingStartedEvent(manualStartTimeOpt)
-            val relativeStartStr = getHumanReadableTimestamp(startedRecordingAtMs, startedDiscussionAtMs)
+            getTimestampOfThemeStartedEvent(cardId) match {
+              case Some(startedDiscussionAtMs) =>
+                val startedRecordingAtMs = getTimestampOfRecordingStartedEvent(manualStartTimeOpt)
+                val relativeStartStr = getHumanReadableTimestamp(startedRecordingAtMs, startedDiscussionAtMs)
 
-            Theme(name, extractUrls(desc), relativeStartStr, startedDiscussionAtMs)
+                Theme(name, extractUrls(desc), relativeStartStr, startedDiscussionAtMs)
+              case None =>
+                Theme(name, extractUrls(desc), "TIMESTAMP_IS_MISSING", 0)
+            }
+
           }.sortWith((t1, t2) => t1.relativeStartMs <= t2.relativeStartMs)
 
           complete(generateHtml(processedThemes))
@@ -89,7 +95,7 @@ object ShownotesGen {
     }
   }
 
-  private def getTimestampOfThemeStartedEvent(cardId: String): Long = {
+  private def getTimestampOfThemeStartedEvent(cardId: String): Option[Long] = {
     val cardActionsJs = Request.Get(UrlGenerator.getCardActionsUrl(cardId)).execute().returnContent().asString()
     val possibleStartTimestamps = parse(cardActionsJs).children.flatMap { event =>
       (event \ "type").values.asInstanceOf[String] match {
@@ -108,10 +114,13 @@ object ShownotesGen {
         case _ => None
       }
     }
-    if (possibleStartTimestamps.size != 1) {
+    if (possibleStartTimestamps.size > 1) {
       println(s"WARN - More than one movement of a card $cardId 'to discuss' -> 'in discussion'. Using the latest timestamp.")
     }
-    possibleStartTimestamps.max
+    if (possibleStartTimestamps.size == 1) {
+      println(s"WARN - Can't fined movements of a card $cardId 'to discuss' -> 'in discussion'. No timestamp found.")
+    }
+    Try(possibleStartTimestamps.max).toOption
   }
 
   private def generateHtml(processed: List[Theme]): String = {
