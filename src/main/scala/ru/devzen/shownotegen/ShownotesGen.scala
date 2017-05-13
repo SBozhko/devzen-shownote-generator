@@ -219,13 +219,13 @@ object ShownotesGen {
 }
 
 object Constants {
-  val TrelloDiscussedListId = "58a25bbd8d9dd346cdfbc209"
-  val TrelloToDiscussCurrentEpisodeListId = "58a25bb3ee8b2c466ea64742"
-  val TrelloInDiscussionListId = "58a25bb92cab934b5ee79fe8"
-  val TrelloRecordingStartedCardId = "58a311747827da4eccd243e1"
-  val TrelloBacklogListId = "58a25bdf46fa646fb87520a7"
+  val TrelloDiscussedListId = Properties.envOrElse("TRELLO_DISCUSSED_LIST_ID", "")
+  val TrelloToDiscussCurrentEpisodeListId = Properties.envOrElse("TRELLO_TO_DISCUSS_LIST_ID", "")
+  val TrelloInDiscussionListId = Properties.envOrElse("TRELLO_IN_DISCUSSION_LIST_ID", "")
+  val TrelloRecordingStartedCardId = Properties.envOrElse("TRELLO_RECORDING_STARTED_CARD_ID", "")
+  val TrelloBacklogListId = Properties.envOrElse("TRELLO_BACKLOG_LIST_ID", "")
 
-  val GitterDevzenRoomId = "577e2d7fc2f0db084a21df2b"
+  val GitterDevzenRoomId = Properties.envOrElse("GITTER_DEVZEN_ROOM_ID", "")
 }
 
 object UrlGenerator {
