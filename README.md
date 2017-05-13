@@ -1,5 +1,7 @@
 # DevZen Shownote Generator
 
+![DevZen themes](http://take.ms/TWqTH)
+
 ## Env Vars for Heroku 
 
 ### API keys and Tokens
