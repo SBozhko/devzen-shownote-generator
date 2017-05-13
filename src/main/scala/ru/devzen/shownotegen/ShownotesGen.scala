@@ -251,9 +251,9 @@ object UrlGenerator {
 
 object Config {
 
-  val TrelloApplicationKey = "a4a7b11c520772e330256e6c9fe0274b"
-  val TrelloReadToken = "737c3884da123617b34e4e749c7c326e59fb8ec1887a7ef6c420dacdd82734a2"
+  val TrelloApplicationKey = Properties.envOrElse("TRELLO_APP_KEY", "")
+  val TrelloReadToken = Properties.envOrElse("TRELLO_READ_TOKEN", "")
 
-  val GitterAccessToken = "461c74097fd21822e904ed80f35f4867df5a4c0a"
+  val GitterAccessToken = Properties.envOrElse("GITTER_ACCESS_TOKEN", "")
 
 }
