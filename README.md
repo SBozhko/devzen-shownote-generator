@@ -1,6 +1,6 @@
 # DevZen Shownote Generator
 
-![DevZen themes](http://take.ms/TWqTH)
+![DevZen themes](https://raw.githubusercontent.com/SBozhko/devzen-shownote-generator/master/dz_2.png)
 
 ## Env Vars for Heroku 
 
