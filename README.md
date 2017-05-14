@@ -54,7 +54,7 @@ JSON body:
 	"token_type": "Bearer"
 }
 ```
-GITTER_ACCESS_TOKEN == access_token
+GITTER_ACCESS_TOKEN == access_token  
 10. Check if it works 
 ```
 $ curl -i -H "Accept: application/json" -H "Authorization: Bearer {your_gitter_access_token}" "https://api.gitter.im/v1/user/me"
