@@ -28,14 +28,14 @@ Get https://trello.com/1/authorize?expiration=never&name=SinglePurposeToken&key=
 ### GITTER_ACCESS_TOKEN
 1. Go to https://developer.gitter.im/apps
 2. Sign in
-3. Create new App https://developer.gitter.im/apps
-4. Specify redirect URL as `https://{your_heroku_app_domain}/trellohook`
-5. As a result you get OAUTH KEY and OAUTH SECRET
-6. Go to https://developer.gitter.im/docs/authentication
-7. GET `https://gitter.im/login/oauth/authorize?client_id={OAUTH KEY}&response_type=code&redirect_uri=https://{your_heroku_app_domain}/trellohook`  
-8. Approve your app
-9. Check URL. You should get the code `https://{your_heroku_app_domain}/trellohook?code={your_code}`
-10. Exchange the code for an access token POST https://gitter.im/login/oauth/token
+3. Create new App https://developer.gitter.im/apps  
+Specify redirect URL as `https://{your_heroku_app_domain}/trellohook`
+4. As a result you get OAUTH KEY and OAUTH SECRET
+5. Go to https://developer.gitter.im/docs/authentication
+6. GET `https://gitter.im/login/oauth/authorize?client_id={OAUTH KEY}&response_type=code&redirect_uri=https://{your_heroku_app_domain}/trellohook`  
+7. Approve your app  
+8. Check URL. You should get the code `https://{your_heroku_app_domain}/trellohook?code={your_code}`  
+9. Exchange the code for an access token POST https://gitter.im/login/oauth/token  
 JSON body:  
 ```
 {
@@ -46,7 +46,7 @@ JSON body:
 	"grant_type" : "authorization_code"
 }
 ```
-11. Your response:
+10. Your response:
 ```
 {
 	"access_token": {your_gitter_access_token},
@@ -54,7 +54,7 @@ JSON body:
 }
 ```
 GITTER_ACCESS_TOKEN == access_token
-12. Check if it works 
+11. Check if it works 
 ```
 $ curl -i -H "Accept: application/json" -H "Authorization: Bearer {your_gitter_access_token}" "https://api.gitter.im/v1/user/me"
 ```
