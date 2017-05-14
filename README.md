@@ -35,7 +35,8 @@ As a result you get OAUTH KEY and OAUTH SECRET
 5. GET `https://gitter.im/login/oauth/authorize?client_id={OAUTH KEY}&response_type=code&redirect_uri=https://{your_heroku_app_domain}/trellohook`  
 6. Approve your app  
 7. Check URL. You should get the code `https://{your_heroku_app_domain}/trellohook?code={your_code}`  
-8. Exchange the code for an access token POST https://gitter.im/login/oauth/token  
+8. Exchange the code for an access token  
+POST https://gitter.im/login/oauth/token  
 JSON body:  
 ```
 {
