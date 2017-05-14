@@ -24,7 +24,6 @@ GITTER_DEVZEN_ROOM_ID
 ### TRELLO_APP_KEY 
 Get Trello API Key from https://trello.com/app-key
 ### TRELLO_READ_TOKEN
-Go to https://developers.trello.com/authorize  
 Get https://trello.com/1/authorize?expiration=never&name=SinglePurposeToken&key=REPLACEWITHYOURKEY&scope=read&response_type=token  
 
 
