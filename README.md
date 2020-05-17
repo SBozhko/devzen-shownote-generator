@@ -20,22 +20,23 @@ TRELLO_RECORDING_STARTED_CARD_ID
 TRELLO_BACKLOG_LIST_ID  
 GITTER_DEVZEN_ROOM_ID
 
-## How to get API keys
+## How to get Trello keys
 ### TRELLO_APP_KEY 
 Get Trello API Key from https://trello.com/app-key
 ### TRELLO_READ_TOKEN
-Get https://trello.com/1/authorize?expiration=never&name=SinglePurposeToken&key=REPLACEWITHYOURKEY&scope=read&response_type=token  
-### GITTER_ACCESS_TOKEN
+Get https://trello.com/1/authorize?expiration=never&name=DevZenShownotesGen&key=TRELLO_APP_KEY&scope=read&response_type=token
+
+
+## How to get GITTER_ACCESS_TOKEN 
 1. Go to https://developer.gitter.im/apps
 2. Sign in
-3. Create new App https://developer.gitter.im/apps  
-Specify redirect URL as `https://{your_heroku_app_domain}/trellohook`  
-As a result you get OAUTH KEY and OAUTH SECRET
+3. Create a new application here https://developer.gitter.im/apps and specify redirect URL as `https://{your_heroku_app_domain}/trellohook`. 
+You should get OAUTH KEY and OAUTH SECRET as a result.
 4. Go to https://developer.gitter.im/docs/authentication
 5. GET `https://gitter.im/login/oauth/authorize?client_id={OAUTH KEY}&response_type=code&redirect_uri=https://{your_heroku_app_domain}/trellohook`  
-6. Approve your app  
-7. Check URL. You should get the code `https://{your_heroku_app_domain}/trellohook?code={your_code}`  
-8. Exchange the code for an access token  
+6. Approve your app.  
+7. You will be redirected and should be able to see your code `https://{your_heroku_app_domain}/trellohook?code={your_code}`  
+8. Exchange the code for GITTER_ACCESS_TOKEN  
 POST https://gitter.im/login/oauth/token  
 JSON body:  
 ```
@@ -47,7 +48,7 @@ JSON body:
 	"grant_type" : "authorization_code"
 }
 ```
-9. Your response:
+9. Your response should look like:
 ```
 {
 	"access_token": {your_gitter_access_token},
