@@ -20,7 +20,7 @@ import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.Properties
+import scala.util.{Properties, Success, Try}
 
 case class Theme(title: String, urls: List[String], readableStartTime: String, relativeStartMs: Long)
 
@@ -141,12 +141,22 @@ object ShownotesGen {
         case _ =>
           response.append(theme.title + "\n")
           response.append("<ul>\n")
-          theme.urls.foreach(url => response.append(s"""<li><a href="$url">$url</a></li>\n"""))
+          theme.urls.foreach { url =>
+            val urlTitle = titleOf(url)
+            response.append(s"""<li><a href="$url">$urlTitle</a></li>\n""")
+          }
           response.append("</ul>\n")
           response.append("</li>\n")
       }
     }
     response.append("</ul>\n").toString
+  }
+
+  private def titleOf(url: String): String = {
+    Try(Request.Get(url).execute().returnContent().asString()) match {
+      case Success(content) => Try(content.substring(content.indexOf("<title>") + 7, content.indexOf("</title>"))).getOrElse(url)
+      case _ => url
+    }
   }
 
   private def extractUrls(text: String): List[String] = {
