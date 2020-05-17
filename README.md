@@ -21,10 +21,23 @@ TRELLO_BACKLOG_LIST_ID
 GITTER_DEVZEN_ROOM_ID
 
 ## How to get Trello keys
-### TRELLO_APP_KEY 
+#### TRELLO_APP_KEY 
 Get Trello API Key from https://trello.com/app-key
-### TRELLO_READ_TOKEN
+#### TRELLO_READ_TOKEN
 Get https://trello.com/1/authorize?expiration=never&name=DevZenShownotesGen&key=TRELLO_APP_KEY&scope=read&response_type=token
+
+## How to register a webhook in Trello
+```
+curl -X POST -H "Content-Type: application/json" \
+https://api.trello.com/1/tokens/{TRELLO_READ_TOKEN}/webhooks/ \
+-d '{
+  "key": "{TRELLO_APP_KEY}",
+  "callbackURL": "https://{your_heroku_app_domain}/trellohook",
+  "idModel":"{TRELLO_IN_DISCUSSION_LIST_ID}",
+  "description": "DevZen_Post2Gitter_Webhook"
+}'
+```
+Read more: https://developer.atlassian.com/cloud/trello/guides/rest-api/webhooks/
 
 
 ## How to get GITTER_ACCESS_TOKEN 
