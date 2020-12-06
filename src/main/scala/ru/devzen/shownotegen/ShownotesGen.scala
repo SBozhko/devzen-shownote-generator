@@ -142,7 +142,7 @@ object ShownotesGen {
           response.append(theme.title + "\n")
           response.append("<ul>\n")
           theme.urls.foreach { url =>
-            val urlTitle = titleOf(url)
+            val urlTitle = UrlUtils.titleOf(url)
             response.append(s"""<li><a href="$url">$urlTitle</a></li>\n""")
           }
           response.append("</ul>\n")
@@ -152,12 +152,7 @@ object ShownotesGen {
     response.append("</ul>\n").toString
   }
 
-  private def titleOf(url: String): String = {
-    Try(Request.Get(url).execute().returnContent().asString()) match {
-      case Success(content) => Try(content.substring(content.indexOf("<title>") + 7, content.indexOf("</title>"))).getOrElse(url)
-      case _ => url
-    }
-  }
+
 
   private def extractUrls(text: String): List[String] = {
     val containedUrls = new scala.collection.mutable.ArrayBuffer[String]()
@@ -266,4 +261,22 @@ object Config {
 
   val GitterAccessToken = Properties.envOrElse("GITTER_ACCESS_TOKEN", "")
 
+}
+
+object UrlUtils {
+  private val TitleTagPattern = Pattern.compile("<\\s*title.*>(.*)<\\/title>")
+
+  def titleOf(url: String): String = {
+
+    Try(Request.Get(url).execute().returnContent().asString()) match {
+      case Success(content) =>
+        val TagMatcher = TitleTagPattern.matcher(content)
+        if (TagMatcher.find()) {
+          Try(TagMatcher.group(1)).getOrElse(url)
+        } else {
+          url
+        }
+      case _ => url
+    }
+  }
 }
