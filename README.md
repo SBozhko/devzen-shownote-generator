@@ -10,7 +10,8 @@
 
 GITTER_ACCESS_TOKEN  
 TRELLO_APP_KEY  
-TRELLO_READ_TOKEN  
+TRELLO_READ_TOKEN
+TELEGRAM_BOT_TOKEN
 
 ### Other ids
 TRELLO_DISCUSSED_LIST_ID  
@@ -74,3 +75,5 @@ GITTER_ACCESS_TOKEN == access_token
 $ curl -i -H "Accept: application/json" -H "Authorization: Bearer {your_gitter_access_token}" "https://api.gitter.im/v1/user/me"
 ```
 
+## How to get TELEGRAM_BOT_TOKEN
+https://core.telegram.org/bots#creating-a-new-bot
