@@ -1,5 +1,7 @@
 package ru.devzen.shownotegen
 
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 import akka.actor.ActorSystem
@@ -270,7 +272,8 @@ object UrlGenerator {
   }
 
   def sendMessageToTelegramChannel(message: String): String = {
-      s"https://api.telegram.org/bot${Constants.TelegramBotToken}/sendMessage?chat_id=${Constants.TelegramBotToken}&text=${message}"
+    val escapedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8.name())
+      s"https://api.telegram.org/bot${Constants.TelegramBotToken}/sendMessage?chat_id=${Constants.TelegramBotToken}&text=$escapedMessage"
   }
 
 }
