@@ -185,6 +185,7 @@ object ShownotesGen {
                 val cardId = (event \ "action" \ "data" \ "card" \ "id").values.asInstanceOf[String]
                 val urls = getThemeUrlsByCardId(cardId)
                 postMessageToGitter(title, urls)
+                postMessageToTelegram(title, urls)
               }
             }
           } catch {
@@ -221,6 +222,19 @@ object ShownotesGen {
       println(s"Sent message to Gitter successfully")
     }
   }
+
+  private def postMessageToTelegram(title: String, urls: List[String]): Unit = {
+    val urlsAsString = urls.mkString("\n")
+    val wholeMessage = s"$title\n$urlsAsString"
+    val response = Request
+      .Get(UrlGenerator.sendMessageToTelegramChannel(wholeMessage))
+      .execute().returnResponse()
+    if (response.getStatusLine.getStatusCode != 200) {
+      println(s"Can't send message to Telegram. Telegram response:\n$response")
+    } else {
+      println(s"Sent message to Telegram successfully")
+    }
+  }
 }
 
 object Constants {
@@ -231,6 +245,9 @@ object Constants {
   val TrelloBacklogListId = Properties.envOrElse("TRELLO_BACKLOG_LIST_ID", "")
 
   val GitterDevzenRoomId = Properties.envOrElse("GITTER_DEVZEN_ROOM_ID", "")
+
+  val TelegramBotToken = Properties.envOrElse("TELEGRAM_BOT_TOKEN", "")
+  val TelegramDevZenChannel = "@devzen_live"
 }
 
 object UrlGenerator {
@@ -250,6 +267,10 @@ object UrlGenerator {
 
   def postMessageToGitterChannel: String = {
     s"https://api.gitter.im/v1/rooms/${Constants.GitterDevzenRoomId}/chatMessages"
+  }
+
+  def sendMessageToTelegramChannel(message: String): String = {
+      s"https://api.telegram.org/bot${Constants.TelegramBotToken}/sendMessage?chat_id=${Constants.TelegramBotToken}&text=${message}"
   }
 
 }
