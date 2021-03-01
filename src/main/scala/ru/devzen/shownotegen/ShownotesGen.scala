@@ -53,9 +53,9 @@ object ShownotesGen {
                 val startedRecordingAtMs = getTimestampOfRecordingStartedEvent(manualStartTimeOpt)
                 val relativeStartStr = getHumanReadableTimestamp(startedRecordingAtMs, startedDiscussionAtMs)
 
-                Theme(name, extractUrls(desc), relativeStartStr, startedDiscussionAtMs)
+                Theme(name, UrlUtils.extractUrls(desc), relativeStartStr, startedDiscussionAtMs)
               case None =>
-                Theme(name, extractUrls(desc), "TIMESTAMP_IS_MISSING", 0)
+                Theme(name, UrlUtils.extractUrls(desc), "TIMESTAMP_IS_MISSING", 0)
             }
 
           }.sortWith((t1, t2) => t1.relativeStartMs <= t2.relativeStartMs)
@@ -155,20 +155,6 @@ object ShownotesGen {
   }
 
 
-
-  private def extractUrls(text: String): List[String] = {
-    val containedUrls = new scala.collection.mutable.ArrayBuffer[String]()
-    val urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)"
-    val pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE)
-    val urlMatcher = pattern.matcher(text)
-
-    while (urlMatcher.find()) {
-      containedUrls.append(text.substring(urlMatcher.start(0), urlMatcher.end(0)))
-    }
-
-    containedUrls.toList
-  }
-
   private def trelloHook = {
     path("trellohook" ~ Slash.?) {
       post {
@@ -206,7 +192,7 @@ object ShownotesGen {
   private def getThemeUrlsByCardId(cardId: String): List[String] = {
     val cardInfoJs = Request.Get(UrlGenerator.getCardInfoUrl(cardId)).execute().returnContent().asString()
     val parsedCardDesc = (parse(cardInfoJs) \ "desc").values.asInstanceOf[String]
-    val urls = extractUrls(parsedCardDesc)
+    val urls = UrlUtils.extractUrls(parsedCardDesc)
     urls
   }
 
@@ -229,7 +215,7 @@ object ShownotesGen {
     val urlsAsString = urls.mkString("\n")
     val wholeMessage = s"$title\n$urlsAsString"
     val response = Request
-      .Get(UrlGenerator.sendMessageToTelegramChannel(wholeMessage))
+      .Get(UrlGenerator.sendMessageToTelegramChannel(wholeMessage, Constants.TelegramBotToken, Constants.TelegramDevZenChannel))
       .execute().returnResponse()
     if (response.getStatusLine.getStatusCode != 200) {
       println(s"Can't send message to Telegram. Telegram response:\n$response")
@@ -271,9 +257,9 @@ object UrlGenerator {
     s"https://api.gitter.im/v1/rooms/${Constants.GitterDevzenRoomId}/chatMessages"
   }
 
-  def sendMessageToTelegramChannel(message: String): String = {
+  def sendMessageToTelegramChannel(message: String, botToken: String, channel: String): String = {
     val escapedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8.name())
-    val url = s"https://api.telegram.org/bot${Constants.TelegramBotToken}/sendMessage?chat_id=${Constants.TelegramDevZenChannel}&text=$escapedMessage"
+    val url = s"https://api.telegram.org/bot$botToken/sendMessage?chat_id=$channel&text=$escapedMessage"
     println("sendMessageToTelegramChannel URL: " + url)
     url
   }
@@ -304,5 +290,18 @@ object UrlUtils {
         }
       case _ => url
     }
+  }
+
+  def extractUrls(text: String): List[String] = {
+    val containedUrls = new scala.collection.mutable.ArrayBuffer[String]()
+    val urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)"
+    val pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE)
+    val urlMatcher = pattern.matcher(text)
+
+    while (urlMatcher.find()) {
+      containedUrls.append(text.substring(urlMatcher.start(0), urlMatcher.end(0)))
+    }
+
+    containedUrls.toList
   }
 }
