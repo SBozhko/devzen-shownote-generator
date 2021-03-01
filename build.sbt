@@ -15,7 +15,4 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-lang3" % "3.5"
 )
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.5" % "test"
-libraryDependencies += "org.scalatest" %% "scalatest-funsuite" % "3.2.5" % "test"
-
-enablePlugins(JavaServerAppPackaging, SuperSafeSbtPlugin)
+enablePlugins(JavaServerAppPackaging)
