@@ -36,9 +36,11 @@ object ShownotesGen {
 
     println(s"Running tests")
 
-    // run tests this hacky way because I couldn't make Scalatest work on Heroku
+    // run tests this hacky way because I couldn't make ScalaTest work on Heroku
     Tests.extractTwoUrls()
     Tests.generateOneComplexTelegramUrl()
+    Tests.getTitleForMediumPost()
+    Tests.getTitleForAmazon()
 
     println(s"Server online")
   }
@@ -292,7 +294,8 @@ object UrlUtils {
       case Success(content) =>
         val TagMatcher = TitleTagPattern.matcher(content)
         if (TagMatcher.find()) {
-          Try(TagMatcher.group(1)).getOrElse(url)
+          val str = TagMatcher.group(1)
+          Try(str).getOrElse(url)
         } else {
           url
         }
@@ -338,6 +341,17 @@ object Tests {
       "https%3A%2F%2Fnoidea.dog%2Fglue%0Ahttps%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DDTAXQNJLskk%0A" +
       "https%3A%2F%2Fwww.amazon.co.uk%2FMaking-Manager-What-Everyone-Looks%2Fdp%2F0753552892%2F%0A" +
       "https%3A%2F%2Fwww.nonviolentcommunication.com%2F")
+  }
+
+  def getTitleForMediumPost(): Unit = {
+    val actual = UrlUtils.titleOf("https://medium.com/better-programming/boost-your-command-line-productivity-with-fuzzy-finder-985aa162ba5d")
+    assert(!actual.startsWith("https://medium.com"))
+
+  }
+
+  def getTitleForAmazon() = {
+    val actual = UrlUtils.titleOf("https://www.amazon.co.uk/Making-Manager-What-Everyone-Looks/dp/0753552892/")
+    assert(!actual.startsWith("https://www.amazon.co.uk"))
   }
 
 }
