@@ -182,7 +182,6 @@ object ShownotesGen {
                 val title = (event \ "action" \ "data" \ "card" \ "name").values.asInstanceOf[String]
                 val cardId = (event \ "action" \ "data" \ "card" \ "id").values.asInstanceOf[String]
                 val urls = getThemeUrlsByCardId(cardId)
-                postMessageToGitter(title, urls)
                 postMessageToTelegram(title, urls)
               }
             }
@@ -206,21 +205,6 @@ object ShownotesGen {
     urls
   }
 
-  private def postMessageToGitter(title: String, urls: List[String]): Unit = {
-    val urlsAsString = urls.mkString("\n")
-    val jsonBody = compact(render("text" -> s"$title\n$urlsAsString"))
-    val response = Request
-      .Post(UrlGenerator.postMessageToGitterChannel)
-      .addHeader("Authorization", s"Bearer ${Config.GitterAccessToken}")
-      .bodyString(jsonBody, ContentType.APPLICATION_JSON)
-      .execute().returnResponse()
-    if (response.getStatusLine.getStatusCode != 200) {
-      println(s"Can't send message to Gitter. Gitter response:\n$response")
-    } else {
-      println(s"Sent message to Gitter successfully")
-    }
-  }
-
   private def postMessageToTelegram(title: String, urls: List[String]): Unit = {
     val urlsAsString = urls.mkString("\n")
     val wholeMessage = s"$title\n$urlsAsString"
@@ -242,8 +226,6 @@ object Constants {
   val TrelloRecordingStartedCardId = Properties.envOrElse("TRELLO_RECORDING_STARTED_CARD_ID", "")
   val TrelloBacklogListId = Properties.envOrElse("TRELLO_BACKLOG_LIST_ID", "")
 
-  val GitterDevzenRoomId = Properties.envOrElse("GITTER_DEVZEN_ROOM_ID", "")
-
   val TelegramBotToken = Properties.envOrElse("TELEGRAM_BOT_TOKEN", "")
   val TelegramDevZenChannel = "@devzen_live"
 }
@@ -263,10 +245,6 @@ object UrlGenerator {
     s"https://api.trello.com/1/cards/$id?key=${Config.TrelloApplicationKey}&token=${Config.TrelloReadToken}"
   }
 
-  def postMessageToGitterChannel: String = {
-    s"https://api.gitter.im/v1/rooms/${Constants.GitterDevzenRoomId}/chatMessages"
-  }
-
   def sendMessageToTelegramChannel(message: String, botToken: String, channel: String): String = {
     val escapedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8.name())
     val url = s"https://api.telegram.org/bot$botToken/sendMessage?chat_id=$channel&text=$escapedMessage"
@@ -280,8 +258,6 @@ object Config {
 
   val TrelloApplicationKey = Properties.envOrElse("TRELLO_APP_KEY", "")
   val TrelloReadToken = Properties.envOrElse("TRELLO_READ_TOKEN", "")
-
-  val GitterAccessToken = Properties.envOrElse("GITTER_ACCESS_TOKEN", "")
 
 }
 
