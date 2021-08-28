@@ -34,6 +34,7 @@ object ShownotesGen {
     val routes = generateShownotes ~ trelloHook
     Http().bindAndHandle(routes, "0.0.0.0", Properties.envOrElse("PORT", "9025").toInt)
 
+    /*
     println(s"Running tests")
 
     // run tests this hacky way because I couldn't make ScalaTest work on Heroku
@@ -41,6 +42,7 @@ object ShownotesGen {
     Tests.generateOneComplexTelegramUrl()
     Tests.getTitleForMediumPost()
     Tests.getTitleForAmazon()
+    */
 
     println(s"Server online")
   }
