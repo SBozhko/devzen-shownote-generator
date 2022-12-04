@@ -1,0 +1,18 @@
+# flyctl launch added from .gitignore
+**/*.class
+**/*.log
+**/.cache
+**/.history
+**/.lib
+**/dist/*
+**/target
+**/lib_managed
+**/src_managed
+**/project/boot
+**/project/plugins/project
+**/.scala_dependencies
+**/.worksheet
+**/.idea
+**/*.iws
+out
+**/.idea_modules

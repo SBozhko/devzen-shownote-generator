@@ -4,7 +4,12 @@
 ![Card to start recording](https://raw.githubusercontent.com/SBozhko/devzen-shownote-generator/master/dz_1.png)
 ![A theme with links](https://raw.githubusercontent.com/SBozhko/devzen-shownote-generator/master/dz_3.png)
 
-## Env Vars for Heroku 
+## Secrets for Heroku / Fly.io
+
+On both platforms secrets are supplied via environment variables.
+
+- https://fly.io/docs/flyctl/secrets/
+- https://devcenter.heroku.com/articles/config-vars
 
 ### API keys and Tokens
 
@@ -40,3 +45,13 @@ Read more: https://developer.atlassian.com/cloud/trello/guides/rest-api/webhooks
 
 ## How to get TELEGRAM_BOT_TOKEN
 https://core.telegram.org/bots#creating-a-new-bot
+
+## Deploying this app to Fly.io
+
+To create an app for the first time if you don't have it follow [this guide](https://fly.io/docs/languages-and-frameworks/dockerfile/).
+
+For subsequent deploys:
+
+- Install [`flyctl`](https://fly.io/docs/getting-started/installing-flyctl/) - you'll need it.
+- Login with `flyctl auth login`.
+- Run `flyctl deploy`
